@@ -9,7 +9,7 @@ for i in range(n):
     if(switch == 1):
         q = []
         for j in range(1000):
-            q.append((randint(123400, 123456700)))
+            q.append((randint(12340000, 123456700)))
         print(*q, sep=" ")
     else:
         q = []
