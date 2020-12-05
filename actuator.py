@@ -2,8 +2,10 @@ import multiprocessing
 import requests
 import time
 import json
+import pickle
 from monitor import monitor
 from random import randint
+from PID_controller import Controller
 
 # ----------------------- Q-LEARNING --------------------------
 from random import randint
@@ -50,7 +52,8 @@ class Environment:
 # Brain Class --------------------------------
 class Brain:
     def __init__(self,alpha,gamma):
-        self.Qtable = dict()
+        with open('sample.json') as f:
+            self.Qtable = dict(json.load(f))
         self.alpha = alpha
         self.gamma = gamma
     def updateQvalue(self,i,j,a,i1,j1,r):
@@ -137,38 +140,162 @@ def serve(x):
 
 
 if __name__ == '__main__':
-    with open("traffic1.txt") as fp:
-        old_servers = -1
-        old_fs = -1
-        init_servers = 1
-        init_fs = 1
-        cnt =1
-        for line in fp:
-            q = line.split(' ')
-            for i in range(len(q)-1):
-                q[i] = int(q[i])
-            q[-1] = int(q[-1][:-1])
-            #num_of_servers = [1,2,3,4]
-            if(init_servers<1):
-                init_servers = 1
-            Ns = init_servers
-            pool = multiprocessing.Pool(processes=Ns)
-            n1 = len(q)
-            q = q[:int(n1*init_fs)+1]
-            inputs = []
-            for i in range(len(q)):
-                inputs.append([q[i],(i%Ns)+1])
-            start_time = time.time()
-            outputs = pool.map(serve, inputs)
-            t = (time.time() - start_time)
-            print(t,"s for request:",cnt)
-            t = round(t,1)
-            print("servers:",init_servers,"fraction:",init_fs)
-            if(cnt>=2):
-                updateQvalue(old_servers,old_fs,action_taken,init_servers,init_fs,t)
-            init_servers,init_fs,action_taken = agentMakeTransition(t,init_servers,init_fs)
-            old_servers, old_fs = init_servers, init_fs
-            time_window=[]
-            cnt +=1
-    with open("sample.json", "w") as outfile:
-        json.dump(brain.Qtable, outfile)
+    #Controller
+    if(flag == 'C'):
+        with open("traffic1.txt") as fp:
+            pid = Controller()
+            old_servers = -1
+            old_fs = -1
+            init_servers = 1
+            init_fs = 1
+            cnt =1
+            dfTime=[]
+            dfServers=[]
+            dfFractal=[]
+            dfTraffic = []
+            for line in fp:
+                q = line.split(' ')
+                for i in range(len(q)-1):
+                    q[i] = int(q[i])
+                q[-1] = int(q[-1][:-1])
+
+                if(init_servers<1):
+                    init_servers = 1
+                Ns = init_servers
+                pool = multiprocessing.Pool(processes=Ns)
+                n1 = len(q)
+                q = q[:int(n1*init_fs)+1]
+                inputs = []
+                for i in range(len(q)):
+                    inputs.append([q[i],(i%Ns)+1])
+                start_time = time.time()
+                outputs = pool.map(serve, inputs)
+                t = (time.time() - start_time)
+                pool.terminate()
+                pool.close()
+                print(t,"s for request:",cnt)
+                t = round(t,1)
+                dfTime.append(t)
+                dfServers.append(Ns)
+                dfFractal.append(init_fs)
+                dfTraffic.append(n1)
+                print("servers:",init_servers,"fraction:",init_fs)
+
+                init_servers, init_fs = pid.GlobalController(t,init_servers,init_fs)
+
+                cnt +=1
+        print("Saving Streaming Data.")
+        with open('serverStream.pkl', 'wb') as f:
+            pickle.dump(dfServers, f)
+        with open('trafficStream.pkl', 'wb') as f:
+            pickle.dump(dfTraffic, f)
+        with open('fractalStream.pkl', 'wb') as f:
+            pickle.dump(dfFractal, f)
+        with open('TimeStream.pkl', 'wb') as f:
+            pickle.dump(dfTime, f)
+        print("Streaming Data Saved")
+
+
+
+
+    elif(flag == 'N'):
+        with open("traffic3.txt") as fp:
+            init_servers = 1
+            init_fs = 1
+            df1=[]
+            df2=[]
+            cnt=1
+            j=0
+            data= []
+            Lst = list(fp.readlines())
+            while(j < 500):
+                line = Lst[j]
+                q = line.split(' ')
+                for i in range(len(q)-1):
+                    q[i] = int(q[i])
+                q[-1] = int(q[-1][:-1])
+                #num_of_servers = [1,2,3,4]
+                if(init_servers<1):
+                    init_servers = 1
+                Ns = init_servers
+                pool = multiprocessing.Pool(processes=Ns)
+                n1 = len(q)
+                q = q[:int(n1*init_fs)+1]
+                inputs = []
+                for i in range(len(q)):
+                    inputs.append([q[i],(i%Ns)+1])
+                start_time = time.time()
+                outputs = pool.map(serve, inputs)
+                t = (time.time() - start_time)
+                pool.terminate()
+                pool.close()
+                print(t,"s for request:",j+1)
+                t = round(t,1)
+                print("servers:",init_servers,"fraction:",init_fs)
+                init_servers, init_fs = monitor(t,init_servers,init_fs)
+                j+=1
+
+
+
+
+
+
+
+    else:
+        with open("traffic1.txt") as fp:
+
+            old_servers = -1
+            old_fs = -1
+            init_servers = 1
+            init_fs = 1
+            cnt =1
+            dfTime=[]
+            dfServers=[]
+            dfFractal=[]
+            dfTraffic = []
+            for line in fp:
+                q = line.split(' ')
+                for i in range(len(q)-1):
+                    q[i] = int(q[i])
+                q[-1] = int(q[-1][:-1])
+                #num_of_servers = [1,2,3,4]
+                if(init_servers<1):
+                    init_servers = 1
+                Ns = init_servers
+                pool = multiprocessing.Pool(processes=Ns)
+                n1 = len(q)
+                q = q[:int(n1*init_fs)+1]
+                inputs = []
+                for i in range(len(q)):
+                    inputs.append([q[i],(i%Ns)+1])
+                start_time = time.time()
+                outputs = pool.map(serve, inputs)
+                t = (time.time() - start_time)
+                pool.terminate()
+                pool.close()
+                print(t,"s for request:",cnt)
+                t = round(t,1)
+                dfTime.append(t)
+                dfServers.append(Ns)
+                dfFractal.append(init_fs)
+                dfTraffic.append(n1)
+                print("servers:",init_servers,"fraction:",init_fs)
+                if(cnt>=2):
+                    updateQvalue(old_servers,old_fs,action_taken,init_servers,init_fs,t)
+                init_servers,init_fs,action_taken = agentMakeTransition(t,init_servers,init_fs)
+                old_servers, old_fs = init_servers, init_fs
+                time_window=[]
+                cnt +=1
+        with open("sample.json", "w") as outfile:
+            json.dump(brain.Qtable, outfile)
+            print('Q-model Saved')
+        print("Saving Streaming Data.")
+        with open('serverStream.pkl', 'wb') as f:
+            pickle.dump(dfServers, f)
+        with open('trafficStream.pkl', 'wb') as f:
+            pickle.dump(dfTraffic, f)
+        with open('fractalStream.pkl', 'wb') as f:
+            pickle.dump(dfFractal, f)
+        with open('TimeStream.pkl', 'wb') as f:
+            pickle.dump(dfTime, f)
+        print("Streaming Data Saved")
