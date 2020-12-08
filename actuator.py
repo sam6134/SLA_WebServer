@@ -96,7 +96,7 @@ class Agent:
 environment = Environment(servers,fractal)
 agent = Agent()
 brain = Brain(0.1,0.9)
-epsilon = 0.4
+epsilon = 0.1
 decay = 0.999
 
 
@@ -143,7 +143,7 @@ flag='RL'
 if __name__ == '__main__':
     #Controller
     if(flag == 'C'):
-        with open("traffic1.txt") as fp:
+        with open("traffic2.txt") as fp:
             pid = Controller()
             old_servers = -1
             old_fs = -1
@@ -260,7 +260,7 @@ if __name__ == '__main__':
 
 
     else:
-        with open("traffic1.txt") as fp:
+        with open("traffic2.txt") as fp:
 
             old_servers = -1
             old_fs = -1
